@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "omarchy-settings",
+  "name": "Settings",
+  "version": "1.0.0",
+  "author": "Omarchy",
+  "description": "Windowed system settings app with search, plus a taskbar gear. Summon with: omarchy-shell shell summon omarchy-settings '{}'.",
+  "kinds": ["panel", "bar-widget"],
+  "entryPoints": {
+    "panel": "Settings.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Settings",
+    "description": "Gear that opens the windowed Settings app",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
