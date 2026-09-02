@@ -49,6 +49,16 @@ o.bind("SUPER + comma", "Settings", "omarchy-shell shell toggle omarchy-settings
 Reload Hyprland after editing bindings (`hyprctl reload`), or log out and back
 in. The binding is remappable — change the chord to whatever you like.
 
+## Remove
+
+```bash
+omarchy plugin remove omarchy-settings
+```
+
+This uninstalls the plugin and its bar gear. It does not touch the launcher-menu
+entry (`~/.config/omarchy/extensions/omarchy-menu.jsonc`) or the keybinding in
+`~/.config/hypr/bindings.lua` — delete those by hand if you added them.
+
 ## Manual open / test
 
 ```bash
@@ -83,6 +93,19 @@ floating terminal.
   has no single `omarchy` command yet.
 - **Live account list + avatars** — add/remove/change-password are wired; a
   read-only account list and avatar picker are future work.
+
+## Dependencies
+
+- **Omarchy** (Arch Linux + Hyprland) — the target distro; reuses its `qs.Ui` /
+  `qs.Commons` component kits and `omarchy` / `omarchy-shell` commands.
+- **Quickshell** (QML + JavaScript) — the UI runtime, provided by Omarchy.
+
+Helper scripts in `bin/` shell out to a few standard tools:
+
+- `curl` + `git` — the Oh My Zsh install script
+- `gum` — account add/remove prompts
+- `jq` — writing the idle-lock timeout into `shell.json`
+- `sudo` / `pkexec` — privileged actions (account add/remove, lid/sleep config)
 
 ## Develop
 
