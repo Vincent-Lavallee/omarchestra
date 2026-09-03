@@ -25,7 +25,7 @@ It is reachable four ways:
 ```bash
 # 1. Install, enable, and place the gear in the bar (prompts for a section,
 #    defaulting to "right").
-omarchy plugin add https://github.com/Vincent-Lavallee/omarchy-settings.git --enable
+omarchy plugin add https://github.com/Vincent-Lavallee/omarchestra.git --enable
 ```
 
 `omarchy plugin add` wires the panel and the gear automatically. The remaining

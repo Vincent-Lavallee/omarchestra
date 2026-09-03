@@ -682,6 +682,7 @@ Item {
           }
 
           ScrollView {
+            id: paneScroll
             width: parent.width
             height: pane.height - paneHeader.implicitHeight - Style.space(12)
             clip: true
@@ -689,7 +690,7 @@ Item {
 
             Column {
               id: rowsColumn
-              width: parent.width
+              width: paneScroll.availableWidth
               spacing: Style.space(6)
 
               Repeater {
