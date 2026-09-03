@@ -1,4 +1,4 @@
-# Omarchy Settings
+# Omarchestra
 
 A windowed **System Settings** app for [Omarchy](https://omarchy.org/), shipped
 as an installable shell plugin. One window aggregates Omarchy's settings — with
@@ -11,6 +11,14 @@ It is reachable four ways:
    the Herdr terminal-multiplexer prefix)
 3. A gear in the taskbar
 4. Clicking the gear
+
+## Screenshots
+
+![Appearance](preview.png)
+
+![Power & Sleep](screenshots/power.png)
+![Defaults](screenshots/defaults.png)
+![Notifications](screenshots/notifications.png)
 
 ## Install
 
@@ -31,7 +39,7 @@ cat >> ~/.config/omarchy/extensions/omarchy-menu.jsonc <<'EOF'
 {
   "settings": {
     "icon": "󰐥", "label": "Settings",
-    "action": "omarchy-shell shell summon omarchy-settings"
+    "action": "omarchy-shell shell summon io.github.vincent-lavallee.omarchestra"
   }
 }
 EOF
@@ -43,7 +51,7 @@ EOF
 ```lua
 -- 3. Keybinding, in ~/.config/hypr/bindings.lua
 -- SUPER + S is already "Toggle scratchpad"; SUPER + comma is free by default.
-o.bind("SUPER + comma", "Settings", "omarchy-shell shell toggle omarchy-settings")
+o.bind("SUPER + comma", "Settings", "omarchy-shell shell toggle io.github.vincent-lavallee.omarchestra")
 ```
 
 Reload Hyprland after editing bindings (`hyprctl reload`), or log out and back
@@ -52,7 +60,7 @@ in. The binding is remappable — change the chord to whatever you like.
 ## Remove
 
 ```bash
-omarchy plugin remove omarchy-settings
+omarchy plugin remove io.github.vincent-lavallee.omarchestra
 ```
 
 This uninstalls the plugin and its bar gear. It does not touch the launcher-menu
@@ -62,9 +70,9 @@ entry (`~/.config/omarchy/extensions/omarchy-menu.jsonc`) or the keybinding in
 ## Manual open / test
 
 ```bash
-omarchy-shell shell summon omarchy-settings '{}'   # open
-omarchy-shell shell toggle  omarchy-settings       # toggle
-omarchy-shell shell hide    omarchy-settings       # close
+omarchy-shell shell summon io.github.vincent-lavallee.omarchestra '{}'   # open
+omarchy-shell shell toggle  io.github.vincent-lavallee.omarchestra       # toggle
+omarchy-shell shell hide    io.github.vincent-lavallee.omarchestra       # close
 ```
 
 ## Sections

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Create a new login account on this machine. Runs in a floating terminal so
-# sudo can prompt for a password. Called by the omarchy-settings "Accounts"
+# sudo can prompt for a password. Called by the omarchestra "Accounts"
 # section.
 set -euo pipefail
 

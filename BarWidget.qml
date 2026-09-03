@@ -6,7 +6,7 @@ import qs.Ui
 // three stay on one code path.
 BarWidget {
   id: root
-  moduleName: "omarchy-settings"
+  moduleName: "io.github.vincent-lavallee.omarchestra"
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -19,7 +19,7 @@ BarWidget {
     tooltipText: "Settings"
     onPressed: function(button) {
       if (!root.bar) return
-      root.bar.run("omarchy-shell shell toggle omarchy-settings")
+      root.bar.run("omarchy-shell shell toggle io.github.vincent-lavallee.omarchestra")
     }
   }
 }

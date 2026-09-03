@@ -1,6 +1,6 @@
 #!/bin/bash
 # Write the systemd-logind power drop-in: lid action on battery, lid action on
-# AC, and the idle sleep timeout. Run as root (via pkexec) by omarchy-settings.
+# AC, and the idle sleep timeout. Run as root (via pkexec) by omarchestra.
 # Overrides Omarchy's shipped "ignore lid / never sleep" defaults.
 set -euo pipefail
 

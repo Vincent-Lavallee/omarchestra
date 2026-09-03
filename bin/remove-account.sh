@@ -1,6 +1,6 @@
 #!/bin/bash
 # Remove a login account (and its home directory) from this machine. Runs in a
-# floating terminal so sudo can prompt. Called by omarchy-settings "Accounts".
+# floating terminal so sudo can prompt. Called by omarchestra "Accounts".
 set -euo pipefail
 
 # Human accounts only: UID >= 1000 (and below the nobody range) with a home.
