@@ -27,13 +27,22 @@ Column {
       font.pixelSize: Style.font.body
       anchors.verticalCenter: parent.verticalCenter
     }
-    Text {
-      text: root.isBattery ? "On Battery" : "Plugged In"
-      color: Qt.darker(host.foreground, 1.4)
-      font.family: host.fontFamily
-      font.pixelSize: Style.font.caption
-      font.bold: true
-      anchors.verticalCenter: parent.verticalCenter
+    Column {
+      spacing: Style.space(1)
+
+      Text {
+        text: root.isBattery ? "On Battery" : "Plugged In"
+        color: Qt.darker(host.foreground, 1.4)
+        font.family: host.fontFamily
+        font.pixelSize: Style.font.body
+        font.bold: true
+      }
+      Text {
+        text: root.isBattery ? "While running on battery" : "While connected to power"
+        color: Qt.darker(host.foreground, 1.5)
+        font.family: host.fontFamily
+        font.pixelSize: Style.font.caption
+      }
     }
   }
 

@@ -19,7 +19,7 @@ Column {
     text: "Shell"
     foreground: host.foreground
     fontFamily: host.fontFamily
-    fontSize: Style.font.body
+    fontSize: Style.font.title
   }
 
   Dropdown {

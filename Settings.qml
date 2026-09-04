@@ -24,7 +24,7 @@ Item {
     searchText = ""
     applyOpenSection(payloadJson)
     animStateFile.reload()
-    powerStateFile.reload()
+    powerStateProc.running = true
     powerProfilesProc.running = true
     defaultsProc.running = true
     dndProc.running = true
@@ -167,8 +167,8 @@ Item {
   readonly property int dropdownRowHeight: Style.space(36)   // taller than the kit's 28px control height
 
   // ---- power & sleep state ------------------------------------------------
-  property string lidBatteryAction: "ignore"    // ignore | lock | suspend | hibernate | poweroff
-  property string lidAcAction: "ignore"         // ignore | lock | suspend | hibernate | poweroff
+  property string lidBatteryAction: "suspend"   // ignore | lock | suspend | hibernate | poweroff
+  property string lidAcAction: "suspend"        // ignore | lock | suspend | hibernate | poweroff
   property string lockTimeout: "never"          // "never" | seconds
   property string sleepTimeout: "never"         // "never" | minutes
   property string powerProfileAc: "balanced"
@@ -226,6 +226,9 @@ Item {
   function applyPowerSettings() {
     savePowerState()
     Util.execDetached("pkexec bash \"" + pluginDir() + "/bin/set-power-settings.sh\" " + lidBatteryAction + " " + lidAcAction + " " + sleepTimeout)
+    // Lid-close lock is a Hyprland switch binding, separate from logind, so
+    // "Do nothing" must also override it (see bin/set-lid-close.sh).
+    Util.execDetached("bash \"" + pluginDir() + "/bin/set-lid-close.sh\" " + lidBatteryAction + " " + lidAcAction)
   }
 
   function setIdleLock() {
@@ -249,15 +252,31 @@ Item {
     return out
   }
 
-  function loadPowerState(raw) {
-    try {
-      var o = JSON.parse(String(raw || ""))
-      if (!o) return
-      if (typeof o.lidBatteryAction === "string") lidBatteryAction = o.lidBatteryAction
-      if (typeof o.lidAcAction === "string") lidAcAction = o.lidAcAction
-      if (typeof o.lockTimeout === "string") lockTimeout = o.lockTimeout
-      if (typeof o.sleepTimeout === "string") sleepTimeout = o.sleepTimeout
-    } catch (e) { /* ignore */ }
+  function parsePowerState(raw) {
+    var p = String(raw || "").split("\t")
+    if (p.length < 5) return
+    if (p[0]) lidBatteryAction = p[0].trim()
+    if (p[1]) lidAcAction = p[1].trim()
+    lockTimeout = nearestLockOption(parseInt(p[4], 10) || 300)
+    var idleAction = p[2].trim()
+    if (idleAction === "ignore" || idleAction === "none") {
+      sleepTimeout = "never"
+    } else {
+      var mins = parseInt(p[3], 10) || 0
+      sleepTimeout = mins > 0 ? String(mins) : "30"
+    }
+  }
+
+  // Snap an arbitrary idle.lock value (seconds) to the nearest dropdown option.
+  function nearestLockOption(seconds) {
+    var opts = [["never", 86400], ["60", 60], ["300", 300], ["600", 600], ["1800", 1800]]
+    var best = "never"
+    var bestDiff = 1e18
+    for (var i = 0; i < opts.length; i++) {
+      var d = Math.abs(opts[i][1] - seconds)
+      if (d < bestDiff) { bestDiff = d; best = opts[i][0] }
+    }
+    return best
   }
 
   function parsePowerProfiles(raw) {
@@ -418,12 +437,12 @@ Item {
     onLoadFailed: root.loadAnimState("")
   }
 
-  property FileView powerStateFile: FileView {
-    path: Quickshell.env("HOME") + "/.local/state/omarchy/settings/power.json"
-    watchChanges: false
-    printErrors: false
-    onLoaded: root.loadPowerState(text())
-    onLoadFailed: root.loadPowerState("")
+  property Process powerStateProc: Process {
+    command: ["bash", root.pluginDir() + "/bin/read-power-state.sh"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.parsePowerState(text)
+    }
   }
 
   property Process accountsProc: Process {
@@ -677,7 +696,7 @@ Item {
             text: sectionLabel(root.currentSection)
             color: Qt.darker(root.foreground, 1.5)
             font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
+            font.pixelSize: Style.font.heading
             font.bold: true
           }
 
