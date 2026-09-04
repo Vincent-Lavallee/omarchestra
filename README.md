@@ -57,6 +57,24 @@ o.bind("SUPER + comma", "Settings", "omarchy-shell shell toggle io.github.vincen
 Reload Hyprland after editing bindings (`hyprctl reload`), or log out and back
 in. The binding is remappable — change the chord to whatever you like.
 
+### Administrator access
+
+Power & Sleep and Accounts changes need administrator rights, so they ask for
+your password.
+
+The first time you change Power & Sleep, Omarchestra installs a small helper
+into a protected system folder and runs it from there — approve the prompt and
+it's automatic. The helper is kept out of your home folder so nothing running
+as your user can alter it.
+
+Because it lives in a protected folder, plugin updates don't refresh it. If
+Power & Sleep ever stops applying after an update, remove the old helper and
+apply your settings again — Omarchestra will reinstall it:
+
+```bash
+sudo rm -f /usr/local/lib/omarchestra/set-power-settings.sh
+```
+
 ## Remove
 
 ```bash
@@ -66,6 +84,14 @@ omarchy plugin remove io.github.vincent-lavallee.omarchestra
 This uninstalls the plugin and its bar gear. It does not touch the launcher-menu
 entry (`~/.config/omarchy/extensions/omarchy-menu.jsonc`) or the keybinding in
 `~/.config/hypr/bindings.lua` — delete those by hand if you added them.
+
+It also leaves the helper that Power & Sleep installed in a protected system
+folder. To remove that too:
+
+```bash
+sudo rm -f /usr/local/lib/omarchestra/set-power-settings.sh
+sudo rmdir /usr/local/lib/omarchestra 2>/dev/null || true
+```
 
 ## Manual open / test
 
@@ -108,12 +134,12 @@ floating terminal.
   `qs.Commons` component kits and `omarchy` / `omarchy-shell` commands.
 - **Quickshell** (QML + JavaScript) — the UI runtime, provided by Omarchy.
 
-Helper scripts in `bin/` shell out to a few standard tools:
+A few standard tools are used behind the scenes:
 
-- `curl` + `git` — the Oh My Zsh install script
-- `gum` — account add/remove prompts
-- `jq` — writing the idle-lock timeout into `shell.json`
-- `sudo` / `pkexec` — privileged actions (account add/remove, lid/sleep config)
+- `git` — to install Oh My Zsh (offered when you switch to Zsh)
+- `gum` — the account add/remove prompts
+- `jq` — to save the idle-lock timeout
+- `sudo` / `pkexec` — the administrator actions (Accounts, Power & Sleep)
 
 ## Develop
 

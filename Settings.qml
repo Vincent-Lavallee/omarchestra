@@ -225,7 +225,15 @@ Item {
 
   function applyPowerSettings() {
     savePowerState()
-    Util.execDetached("pkexec bash \"" + pluginDir() + "/bin/set-power-settings.sh\" " + lidBatteryAction + " " + lidAcAction + " " + sleepTimeout)
+    // The privileged helper lives at a root-owned, non-user-writable path so
+    // pkexec never executes a script from the user-writable plugin checkout
+    // (where it could be swapped after authorization). Install it once
+    // (guarded by the existence check), then run it with the validated
+    // lid/sleep values.
+    var helper = "/usr/local/lib/omarchestra/set-power-settings.sh"
+    Util.execDetached("pkexec bash -c '" +
+      "[ -x " + helper + " ] || install -D -m 0755 -o root -g root \"" + pluginDir() + "/bin/set-power-settings.sh\" " + helper + "; " +
+      helper + " " + lidBatteryAction + " " + lidAcAction + " " + sleepTimeout + "'")
     // Lid-close lock is a Hyprland switch binding, separate from logind, so
     // "Do nothing" must also override it (see bin/set-lid-close.sh).
     Util.execDetached("bash \"" + pluginDir() + "/bin/set-lid-close.sh\" " + lidBatteryAction + " " + lidAcAction)
