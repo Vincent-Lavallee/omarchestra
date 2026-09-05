@@ -168,6 +168,16 @@ var animOptions = [
   { value: "fade", label: "Fade" }
 ]
 
+// Window padding presets. "default" is Omarchy's gaps (5 inner / 10 outer);
+// it maps to removing the override so the system default always wins.
+var windowPaddingOptions = [
+  { value: "none", label: "None" },
+  { value: "compact", label: "Compact" },
+  { value: "default", label: "Default" },
+  { value: "comfortable", label: "Comfortable" },
+  { value: "large", label: "Large" }
+]
+
 var lidActionOptions = [
   { value: "ignore", label: "Do nothing" },
   { value: "lock", label: "Lock" },
