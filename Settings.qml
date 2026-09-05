@@ -226,13 +226,16 @@ Item {
   function applyPowerSettings() {
     savePowerState()
     // The privileged helper lives at a root-owned, non-user-writable path so
-    // pkexec never executes a script from the user-writable plugin checkout
-    // (where it could be swapped after authorization). Install it once
-    // (guarded by the existence check), then run it with the validated
-    // lid/sleep values.
+    // pkexec never *executes* a script straight from the user-writable plugin
+    // checkout (where it could be swapped after authorization). We reinstall it
+    // only when the source has changed, so updates to bin/set-power-settings.sh
+    // deploy without a manual step. Tradeoff vs. a strict install-once: each
+    // change re-reads the user-writable source once (a narrow TOCTOU) before
+    // running the root-owned copy.
     var helper = "/usr/local/lib/omarchestra/set-power-settings.sh"
+    var src = pluginDir() + "/bin/set-power-settings.sh"
     Util.execDetached("pkexec bash -c '" +
-      "[ -x " + helper + " ] || install -D -m 0755 -o root -g root \"" + pluginDir() + "/bin/set-power-settings.sh\" " + helper + "; " +
+      "cmp -s \"" + src + "\" " + helper + " || install -D -m 0755 -o root -g root \"" + src + "\" " + helper + "; " +
       helper + " " + lidBatteryAction + " " + lidAcAction + " " + sleepTimeout + "'")
     // Lid-close lock is a Hyprland switch binding, separate from logind, so
     // "Do nothing" must also override it (see bin/set-lid-close.sh).
@@ -247,7 +250,18 @@ Item {
   function setPowerProfile(source, profile) {
     if (source === "ac") powerProfileAc = profile
     else powerProfileBattery = profile
-    Util.execDetached("omarchy powerprofiles set " + source + " " + profile)
+    // Persist the per-source preference, then re-sync the *active* profile from
+    // the source actually in use. `omarchy powerprofiles set <source> <profile>`
+    // runs `powerprofilesctl set` on the live profile, so editing "On battery"
+    // while plugged in would wrongly flip the active profile. Writing the state
+    // file ourselves and letting `autodetect` re-apply keeps the active profile
+    // tied to the real power source (and the path mirrors Omarchy's state dir).
+    var stateDir = "${OMARCHY_POWERPROFILES_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/powerprofiles}"
+    Util.execDetached(
+      "state_dir=\"" + stateDir + "\"; " +
+      "mkdir -p \"$state_dir\" && " +
+      "printf '%s' \"" + profile + "\" > \"$state_dir/" + source + "\" && " +
+      "omarchy powerprofiles set autodetect")
   }
 
   function powerProfileOptions() {

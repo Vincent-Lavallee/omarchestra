@@ -29,4 +29,6 @@ mkdir -p /etc/systemd/logind.conf.d
   fi
 } > /etc/systemd/logind.conf.d/90-omarchy-power.conf
 
-systemctl restart systemd-logind
+# Reload, don't restart: restarting systemd-logind tears down the user session
+# (kills the compositor and every app). logind re-reads the drop-in on reload.
+systemctl reload systemd-logind >/dev/null 2>&1 || true
