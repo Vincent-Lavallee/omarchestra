@@ -25,6 +25,7 @@ Item {
     applyOpenSection(payloadJson)
     animStateFile.reload()
     windowPaddingStateFile.reload()
+    shellStatusFile.reload()
     powerStateProc.running = true
     powerProfilesProc.running = true
     defaultsProc.running = true
@@ -162,6 +163,10 @@ Item {
     Util.execDetached("omarchy-launch-floating-terminal-with-presentation 'bash \"" + p + "\"'")
   }
 
+  function notify(message) {
+    Util.execDetached("omarchy notification send '" + message + "'")
+  }
+
   // ---- workspace animation state -----------------------------------------
   property string animWorkspaceStyle: "none"   // none | slide | slidevert | slidefade | fade
 
@@ -193,10 +198,12 @@ Item {
   property string defaultEditor: ""
   property string defaultAgent: ""
   property string currentShell: "/bin/bash"
+  property bool omzInstalled: false
 
   // ---- shell prompt state -------------------------------------------------
   property bool shellPromptOpen: false
   property string pendingShellPath: "/usr/bin/zsh"
+  property string pendingShellToken: ""
 
   // ---- accounts state -----------------------------------------------------
   property var accounts: []
@@ -239,9 +246,10 @@ Item {
     // running the root-owned copy.
     var helper = "/usr/local/lib/omarchestra/set-power-settings.sh"
     var src = pluginDir() + "/bin/set-power-settings.sh"
-    Util.execDetached("pkexec bash -c '" +
-      "cmp -s \"" + src + "\" " + helper + " || install -D -m 0755 -o root -g root \"" + src + "\" " + helper + "; " +
-      helper + " " + lidBatteryAction + " " + lidAcAction + " " + sleepTimeout + "'")
+    var inner = "cmp -s \"" + src + "\" " + helper + " || install -D -m 0755 -o root -g root \"" + src + "\" " + helper + "; " +
+      helper + " " + lidBatteryAction + " " + lidAcAction + " " + sleepTimeout
+    powerApplyProc.command = ["pkexec", "bash", "-c", inner]
+    powerApplyProc.running = true
     // Lid-close lock is a Hyprland switch binding, separate from logind, so
     // "Do nothing" must also override it (see bin/set-lid-close.sh).
     Util.execDetached("bash \"" + pluginDir() + "/bin/set-lid-close.sh\" " + lidBatteryAction + " " + lidAcAction)
@@ -372,12 +380,13 @@ Item {
 
   function parseDefaults(raw) {
     var p = String(raw || "").split("\t")
-    if (p.length < 5) return
+    if (p.length < 6) return
     defaultBrowser = p[0].trim()
     defaultTerminal = p[1].trim()
     defaultEditor = p[2].trim()
     defaultAgent = p[3].trim()
     currentShell = p[4].trim() || "/bin/bash"
+    omzInstalled = p[5].trim() === "yes"
   }
 
   function shellOptions() {
@@ -392,10 +401,11 @@ Item {
   }
 
   // Picking Zsh offers to install Oh My Zsh first; the confirm/cancel handlers
-  // below decide whether the install script runs before `chsh`.
+  // below decide whether the install script runs before `chsh`. If Oh My Zsh is
+  // already installed there is nothing to offer — skip straight to `chsh`.
   function setDefaultShell(shellPath) {
     var bin = shellPath.split("/").pop()
-    if (bin === "zsh") {
+    if (bin === "zsh" && !omzInstalled) {
       pendingShellPath = shellPath
       shellPromptOpen = true
     } else {
@@ -414,12 +424,39 @@ Item {
   }
 
   function applyDefaultShell(shellPath, installOmz) {
+    currentShell = shellPath   // optimistic; defaultsProc reverts it if chsh fails
     var bin = shellPath.split("/").pop()
     var pre = ""
-    if (installOmz) pre = "bash \"" + pluginDir() + "/bin/install-oh-my-zsh.sh\"; "
+    if (installOmz) pre = "command -v zsh >/dev/null || sudo pacman -S --noconfirm zsh; bash \"" + pluginDir() + "/bin/install-oh-my-zsh.sh\"; "
     else if (bin === "zsh") pre = "command -v zsh >/dev/null || sudo pacman -S --noconfirm zsh; "
     else if (bin === "fish") pre = "command -v fish >/dev/null || sudo pacman -S --noconfirm fish; "
-    Util.execDetached("omarchy-launch-floating-terminal-with-presentation '" + pre + "chsh -s " + shellPath + "'")
+    // `chsh` rewrites the login shell but not the live $SHELL, so new terminals
+    // would keep the old shell until the next login. Chain the session-env
+    // update (hl.env toggle + systemd/dbus) so the change applies immediately,
+    // and write a status marker so a failed `chsh` (wrong/cancelled password)
+    // reverts the dropdown instead of leaving it showing the un-applied shell.
+    var token = String(Date.now())
+    pendingShellToken = token
+    var marker = "$HOME/.local/state/omarchy/settings/shell-status"
+    var body = "mkdir -p \"$HOME/.local/state/omarchy/settings\"; " +
+      "if chsh -s " + shellPath + "; then " +
+      "bash \"" + pluginDir() + "/bin/set-default-shell.sh\" " + shellPath + "; " +
+      "echo \"ok " + token + "\" > \"" + marker + "\"; " +
+      "else echo \"fail " + token + "\" > \"" + marker + "\"; fi"
+    Util.execDetached("omarchy-launch-floating-terminal-with-presentation '" + pre + body + "'")
+  }
+
+  // Called when the shell-status marker changes (written by the floating
+  // terminal after `chsh`). Only act on the token we most recently requested so
+  // a stale marker from a previous run doesn't trigger a spurious revert.
+  function handleShellStatus(raw) {
+    var s = String(raw || "").trim()
+    if (s === "") return
+    var parts = s.split(" ")
+    if (parts.length < 2 || parts[1] !== pendingShellToken) return
+    pendingShellToken = ""
+    if (parts[0] === "fail") notify("Couldn't change shell — authentication failed")
+    defaultsProc.running = true   // re-read /etc/passwd; reverts currentShell on failure
   }
 
   // ---- security -----------------------------------------------------------
@@ -512,11 +549,31 @@ Item {
     onLoadFailed: root.loadWindowPaddingState("")
   }
 
+  // Watches the marker the floating terminal writes after `chsh` completes, so
+  // a failed (wrong/cancelled password) shell change can revert the dropdown.
+  property FileView shellStatusFile: FileView {
+    path: Quickshell.env("HOME") + "/.local/state/omarchy/settings/shell-status"
+    watchChanges: true
+    printErrors: false
+    onFileChanged: reload()
+    onLoaded: root.handleShellStatus(text())
+    onLoadFailed: root.handleShellStatus("")
+  }
+
   property Process powerStateProc: Process {
     command: ["bash", root.pluginDir() + "/bin/read-power-state.sh"]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: root.parsePowerState(text)
+    }
+  }
+
+  // Runs the privileged logind drop-in write (via pkexec). On auth failure
+  // `exitCode` is non-zero, so re-read the real state to revert the dropdowns.
+  property Process powerApplyProc: Process {
+    onExited: function(exitCode, exitStatus) {
+      if (exitCode !== 0) root.notify("Power settings not applied — authentication failed")
+      root.powerStateProc.running = true
     }
   }
 
@@ -545,7 +602,8 @@ Item {
       "b=$(omarchy-default-browser 2>/dev/null); t=$(omarchy-default-terminal 2>/dev/null); " +
       "e=$(omarchy-default-editor 2>/dev/null); a=$(cat \"$HOME/.config/omarchy/defaults/agent\" 2>/dev/null); " +
       "s=$(getent passwd \"$USER\" 2>/dev/null | cut -d: -f7); " +
-      "printf \"%s\\t%s\\t%s\\t%s\\t%s\\n\" \"$b\" \"$t\" \"$e\" \"$a\" \"$s\""]
+      "o=$([ -d \"$HOME/.oh-my-zsh\" ] && echo yes || echo no); " +
+      "printf \"%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n\" \"$b\" \"$t\" \"$e\" \"$a\" \"$s\" \"$o\""]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: root.parseDefaults(text)

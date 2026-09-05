@@ -23,6 +23,7 @@ Column {
   }
 
   Dropdown {
+    id: shellDropdown
     width: parent.width
     label: "Default shell"
     fontFamily: host.fontFamily
@@ -33,5 +34,13 @@ Column {
     options: host.shellOptions()
     value: host.currentShell
     onChanged: function(v) { host.setDefaultShell(v) }
+
+    // The Dropdown breaks its `value` binding when the user picks an option, so
+    // a re-read of /etc/passwd alone won't move it back after a failed `chsh`.
+    // Re-sync whenever the host re-reads the real shell.
+    Connections {
+      target: host
+      function onCurrentShellChanged() { shellDropdown.value = host.currentShell }
+    }
   }
 }

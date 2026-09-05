@@ -47,6 +47,7 @@ Column {
   }
 
   Dropdown {
+    id: lidDropdown
     width: parent.width
     label: "When lid is closed"
     fontFamily: host.fontFamily
@@ -60,6 +61,14 @@ Column {
       if (root.isBattery) host.lidBatteryAction = v
       else host.lidAcAction = v
       host.applyPowerSettings()
+    }
+
+    // Re-sync after a re-read so a failed pkexec (wrong password) reverts the
+    // dropdown instead of leaving it on the un-applied value.
+    Connections {
+      target: host
+      function onLidBatteryActionChanged() { lidDropdown.value = root.isBattery ? host.lidBatteryAction : host.lidAcAction }
+      function onLidAcActionChanged() { lidDropdown.value = root.isBattery ? host.lidBatteryAction : host.lidAcAction }
     }
   }
 
@@ -90,6 +99,7 @@ Column {
   }
 
   Dropdown {
+    id: sleepDropdown
     width: parent.width
     label: "Sleep after inactivity"
     fontFamily: host.fontFamily
@@ -100,5 +110,12 @@ Column {
     options: host.sleepTimeoutOptions
     value: host.sleepTimeout
     onChanged: function(v) { host.sleepTimeout = v; host.applyPowerSettings() }
+
+    // Re-sync after a re-read so a failed pkexec (wrong password) reverts the
+    // dropdown instead of leaving it on the un-applied value.
+    Connections {
+      target: host
+      function onSleepTimeoutChanged() { sleepDropdown.value = host.sleepTimeout }
+    }
   }
 }

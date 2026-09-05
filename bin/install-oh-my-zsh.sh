@@ -1,6 +1,6 @@
 #!/bin/bash
-# Install Oh My Zsh plus the zsh-autosuggestions (auto-completion) plugin, and
-# enable the plugin in ~/.zshrc. Idempotent. Run in a terminal by the
+# Install and activate Oh My Zsh plus the zsh-autosuggestions (auto-completion)
+# plugin, wiring both into ~/.zshrc. Idempotent. Run in a terminal by the
 # omarchestra "Terminal" section.
 #
 # Both external sources are pinned to full commit hashes and fetched via git
@@ -30,13 +30,26 @@ if [[ ! -d "$custom/plugins/zsh-autosuggestions" ]]; then
   git -C "$custom/plugins/zsh-autosuggestions" checkout "$AUTOSUGGESTIONS_COMMIT"
 fi
 
-echo "Enabling the plugin in ~/.zshrc…"
-if ! grep -q "zsh-autosuggestions" "$HOME/.zshrc"; then
-  if grep -q '^plugins=' "$HOME/.zshrc"; then
-    sed -i 's/^plugins=(/plugins=(zsh-autosuggestions /' "$HOME/.zshrc"
-  else
-    printf '\nplugins=(git zsh-autosuggestions)\n' >> "$HOME/.zshrc"
+if grep -q 'source .*oh-my-zsh' "$HOME/.zshrc" 2>/dev/null; then
+  echo "Oh My Zsh already active — adding the plugin…"
+  if ! grep -q "zsh-autosuggestions" "$HOME/.zshrc"; then
+    if grep -q '^plugins=' "$HOME/.zshrc"; then
+      sed -i 's/^plugins=(/plugins=(zsh-autosuggestions /' "$HOME/.zshrc"
+    else
+      printf 'plugins=(git zsh-autosuggestions)\n' >> "$HOME/.zshrc"
+    fi
   fi
+else
+  echo "Activating Oh My Zsh in ~/.zshrc…"
+  touch "$HOME/.zshrc"
+  {
+    printf 'export ZSH="$HOME/.oh-my-zsh"\n'
+    printf 'ZSH_THEME="robbyrussell"\n'
+    printf 'plugins=(git zsh-autosuggestions)\n'
+    printf 'source "$ZSH/oh-my-zsh.sh"\n\n'
+    cat "$HOME/.zshrc"
+  } > "$HOME/.zshrc.omz"
+  mv "$HOME/.zshrc.omz" "$HOME/.zshrc"
 fi
 
 echo "Done. Start a new shell (or run: source ~/.zshrc) to activate."
