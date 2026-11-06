@@ -23,6 +23,7 @@ Column {
   }
 
   Dropdown {
+    id: animDropdown
     width: parent.width
     label: "Workspace animation"
     fontFamily: host.fontFamily
@@ -33,5 +34,12 @@ Column {
     options: host.animOptions
     value: host.animWorkspaceStyle
     onChanged: function(v) { host.animWorkspaceStyle = v; host.applyAnimations() }
+
+    // Dropdown overwrites its own `value` on selection, so follow changes made
+    // elsewhere (turning on Workspace swipe switches the slide on) too.
+    Connections {
+      target: host
+      function onAnimWorkspaceStyleChanged() { animDropdown.value = host.animWorkspaceStyle }
+    }
   }
 }

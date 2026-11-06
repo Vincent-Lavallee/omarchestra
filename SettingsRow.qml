@@ -11,15 +11,23 @@ BorderSurface {
   property var host
   required property var modelData
 
+  // A featured row is a call-to-action: accent border and tint, a bold label,
+  // and more room, so it stands out from the plain rows around it.
+  readonly property bool featured: modelData.featured === true
+
   width: parent.width
-  implicitHeight: rowContent.implicitHeight + Style.space(18)
+  implicitHeight: rowContent.implicitHeight + Style.space(featured ? 30 : 18)
   color: rowMouse.containsMouse
     ? Style.hoverFillFor(host.foreground, host.accent)
-    : Qt.rgba(host.foreground.r, host.foreground.g, host.foreground.b, 0.04)
+    : (featured
+        ? Qt.rgba(host.accent.r, host.accent.g, host.accent.b, 0.12)
+        : Qt.rgba(host.foreground.r, host.foreground.g, host.foreground.b, 0.04))
   radius: Style.cornerRadius
   borderSpec: rowMouse.containsMouse
     ? Border.controlSpec("hover-cursor", host.foreground, host.accent)
-    : Border.flat(Qt.rgba(host.foreground.r, host.foreground.g, host.foreground.b, 0.10), 1)
+    : (featured
+        ? Border.flat(host.accent, 1)
+        : Border.flat(Qt.rgba(host.foreground.r, host.foreground.g, host.foreground.b, 0.10), 1))
 
   Item {
     id: rowContent
@@ -36,9 +44,9 @@ BorderSurface {
       anchors.verticalCenter: parent.verticalCenter
       width: Style.space(24)
       text: row.modelData.icon
-      color: host.foreground
+      color: row.featured ? host.accent : host.foreground
       font.family: host.fontFamily
-      font.pixelSize: Style.font.title
+      font.pixelSize: row.featured ? Style.font.heading : Style.font.title
       horizontalAlignment: Text.AlignHCenter
     }
 
@@ -55,7 +63,8 @@ BorderSurface {
         text: row.modelData.label
         color: host.foreground
         font.family: host.fontFamily
-        font.pixelSize: Style.font.body
+        font.pixelSize: row.featured ? Style.font.title : Style.font.body
+        font.bold: row.featured
         elide: Text.ElideRight
       }
       Text {

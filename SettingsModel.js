@@ -8,7 +8,7 @@
 // Sidebar groups, in display order. Each section carries a `group` matching one
 // of these; the rail renders a header per group followed by its sections.
 var sectionGroups = [
-  "Personalization", "Connectivity", "System", "Apps & Defaults", "Security & Input", "About"
+  "Personalization", "Connectivity", "System", "Apps & Defaults", "Security", "About"
 ]
 
 // The left rail. `keywords` widen search beyond the label/description/section.
@@ -29,14 +29,17 @@ var sections = [
     keywords: ["battery", "sleep", "suspend", "lid", "idle", "lock", "screensaver", "screen saver", "energy"] },
   { id: "storage",    group: "System", label: "Storage",     icon: "󰋊",
     keywords: ["disk", "drive", "space", "snapshot", "usage", "btrfs", "rollback"] },
+  { id: "pointer",    group: "System", label: "Trackpad & Mouse", icon: "󰟸",
+    keywords: ["touchpad", "trackpad", "mouse", "pointer", "cursor", "tap to click", "right click", "scroll", "scroll direction",
+               "scroll speed", "natural scrolling", "swipe", "gesture", "workspace swipe", "acceleration", "sensitivity"] },
+  { id: "keyboard",   group: "System", label: "Keyboard & Config", icon: "󰌌",
+    keywords: ["keybindings", "shortcut", "hotkeys", "input", "keyboard layout", "language", "layout", "keyboard language"] },
   { id: "terminal",   group: "Apps & Defaults", label: "Terminal",    icon: "󰆍",
     keywords: ["shell", "zsh", "bash", "oh-my-zsh", "command line", "cli", "terminal"] },
   { id: "defaults",   group: "Apps & Defaults", label: "Defaults",    icon: "󰄬",
     keywords: ["default apps", "browser", "terminal", "editor", "agent", "open with"] },
-  { id: "security",   group: "Security & Input", label: "Accounts & Security", icon: "󰌾",
+  { id: "security",   group: "Security", label: "Accounts & Security", icon: "󰌾",
     keywords: ["user", "account", "password", "fingerprint", "fido2", "ssh", "encryption", "sudo"] },
-  { id: "keyboard",   group: "Security & Input", label: "Keyboard & Config", icon: "󰌌",
-    keywords: ["keybindings", "shortcut", "hotkeys", "input", "mouse", "touchpad", "trackpad", "keyboard layout"] },
   { id: "about",      group: "About", label: "About",       icon: "",
     keywords: ["system info", "version", "specs", "hardware", "about", "documentation"] }
 ]
@@ -44,12 +47,17 @@ var sections = [
 // Each row: { section, label, description, icon, command, keywords }.
 // Commands are the same strings the launcher menu runs, or direct summons of
 // the existing per-topic panels.
+//
+// Optional flags:
+//   bottom   — render below the section's custom blocks instead of above them
+//              (used for "open the config file" escape hatches).
+//   featured — draw the row as a highlighted call-to-action.
 var rows = [
   // Appearance
   { section: "appearance", label: "Theme", description: "Switch the color theme", icon: "󱐋",
     command: "theme=$(omarchy-theme-switcher); [[ -n $theme ]] && omarchy-theme-set \"$theme\"",
     keywords: ["color scheme", "colors", "accent", "palette", "dark", "light", "theme"] },
-  { section: "appearance", label: "Background", description: "Change the wallpaper", icon: "󰸉",
+  { section: "appearance", label: "Background", description: "Change the wallpaper (the lock screen shows it too)", icon: "󰸉",
     command: "background=$(omarchy-theme-bg-switcher); [[ -n $background ]] && omarchy-theme-bg-set \"$background\"",
     keywords: ["wallpaper", "desktop picture", "image", "bg", "wall", "photo"] },
   { section: "appearance", label: "Font", description: "Pick the system font", icon: "󰛖",
@@ -58,6 +66,15 @@ var rows = [
   { section: "appearance", label: "Menu bar", description: "Position and transparency", icon: "󰍜",
     command: "omarchy menu summon style.bar",
     keywords: ["taskbar", "status bar", "top bar", "panel", "bar position", "transparency", "dock"] },
+  // Omarchy's own lock screen has no wallpaper setting: it shows the current
+  // wallpaper, blurred. So this opens the same picker as "Background", under the
+  // name people look for — no extra plugin needed.
+  { section: "appearance", label: "Lock screen", description: "Pick the wallpaper shown behind the lock screen", icon: "󰌾",
+    command: "background=$(omarchy-theme-bg-switcher); [[ -n $background ]] && omarchy-theme-bg-set \"$background\"",
+    keywords: ["lock", "lockscreen", "lock screen wallpaper", "wallpaper", "background", "unlock", "login", "blur"] },
+  { section: "appearance", label: "Boot screen", description: "The disk-unlock screen shown at startup", icon: "󰟵",
+    command: "omarchy menu summon style.unlock",
+    keywords: ["boot", "boot lock screen", "plymouth", "splash", "startup", "disk unlock", "encryption", "login", "unlock"] },
 
   // Displays
   { section: "displays", label: "Displays", description: "Brightness, scale, and output layout", icon: "󰍹",
@@ -133,29 +150,28 @@ var rows = [
     keywords: ["passwd", "password change", "user password", "reset password"] },
 
   // Keyboard & Config
-  { section: "keyboard", label: "Keybindings", description: "View and edit keyboard shortcuts", icon: "󰌌",
+  { section: "keyboard", label: "Keybindings", description: "View and edit keyboard shortcuts", icon: "󰌌", bottom: true,
     command: "omarchy-launch-config-editor \"$HOME/.config/hypr/bindings.lua\"",
     keywords: ["keyboard shortcuts", "hotkeys", "bindings", "shortcut", "keys", "rebind"] },
-  { section: "keyboard", label: "Input", description: "Keyboard and mouse settings", icon: "󰌌",
+  { section: "keyboard", label: "Input config", description: "Advanced: edit input.lua (repeat rate, numlock, and more)", icon: "󰌌", bottom: true,
     command: "omarchy-launch-config-editor \"$HOME/.config/hypr/input.lua\"",
-    keywords: ["keyboard", "mouse", "touchpad", "trackpad", "input device", "repeat rate", "layout"] },
+    keywords: ["keyboard", "mouse", "touchpad", "trackpad", "input device", "repeat rate", "layout", "input.lua"] },
 
   // About
+  // Opens in the default browser (not a webapp window) so GitHub is already
+  // signed in.
+  { section: "about", label: "Request a feature", description: "Missing a setting, or found a bug? Tell us on GitHub", icon: "󰅺", featured: true,
+    command: "omarchy-launch-browser 'https://github.com/Vincent-Lavallee/omarchestra/issues/new/choose'",
+    keywords: ["feature", "request", "suggest", "idea", "issue", "bug", "feedback", "github", "report", "omarchestra"] },
   { section: "about", label: "About this computer", description: "Hardware and system overview", icon: "",
     command: "omarchy launch about",
-    keywords: ["system info", "specs", "hardware", "overview", "fastfetch", "about"] },
-  { section: "about", label: "Omarchy version", description: "Installed Omarchy version", icon: "",
-    command: "omarchy-launch-floating-terminal-with-presentation 'omarchy version'",
-    keywords: ["version", "release", "channel"] },
+    keywords: ["system info", "specs", "hardware", "overview", "fastfetch", "about", "version"] },
   { section: "about", label: "System stats", description: "CPU and memory usage", icon: "󰍛",
     command: "omarchy-launch-floating-terminal-with-presentation 'omarchy system stats'",
     keywords: ["cpu", "memory", "ram", "usage", "performance", "load"] },
   { section: "about", label: "Documentation", description: "Open the Omarchy manual", icon: "󰈔",
     command: "omarchy-launch-webapp 'https://omarchy.org/manual/'",
-    keywords: ["docs", "manual", "help", "guide", "website"] },
-  { section: "about", label: "Community", description: "Join the Omarchy Discord", icon: "󰙯",
-    command: "omarchy-launch-discord-community",
-    keywords: ["discord", "community", "support", "forum", "chat"] }
+    keywords: ["docs", "manual", "help", "guide", "website"] }
 ]
 
 // ---- static dropdown option lists --------------------------------------
@@ -176,6 +192,60 @@ var windowPaddingOptions = [
   { value: "default", label: "Default" },
   { value: "comfortable", label: "Comfortable" },
   { value: "large", label: "Large" }
+]
+
+// Scroll direction. `natural` is Hyprland's natural_scroll = true. The labels say
+// what actually happens, per device, instead of a product name.
+var touchpadScrollDirectionOptions = [
+  { value: "natural", label: "Follows your fingers" },
+  { value: "traditional", label: "Traditional" }
+]
+
+var mouseScrollDirectionOptions = [
+  { value: "natural", label: "Follows the wheel" },
+  { value: "traditional", label: "Traditional" }
+]
+
+// Workspace swipe feel. While a swipe is on, these are written alongside the
+// gesture. `distance` is how far you swipe for a whole workspace (Hyprland's
+// default is 300: a short swipe flies past); `cancelRatio` is how far you must
+// get before letting go commits to the next workspace; `minSpeedToForce` is the
+// flick speed that commits regardless. Tune here if the swipe still feels off.
+//
+// Bump `version` whenever you change these: it makes the app regenerate the
+// files it already wrote, so existing installs pick the new values up.
+var swipeTuning = { version: 1, distance: 500, cancelRatio: 0.2, minSpeedToForce: 8 }
+
+// The slide that plays when you let go of a swipe (and on every workspace
+// switch). It's a spring, not a bezier curve, the same kind of motion macOS uses:
+// it glides to a stop with a long soft tail, and if a new swipe interrupts it
+// mid-slide it carries its speed over instead of restarting. Measured on this
+// hardware (share of the slide done at 50% / 90% / 99% of the way): about
+// 108 / 267 / 442 ms, so it's as quick to move as the old 450 ms bezier but lands
+// more gently. `stiffness` is how fast it moves, `damping` how little it rings
+// (25 is just short of critical damping: no bounce). Keep `mass` at 1. Hyprland
+// ignores the animation's `speed` for springs, so the spring alone sets the timing.
+// Bump `version` when you change it, as with swipeTuning above.
+var slideAnimation = { version: 2, mass: 1, stiffness: 170, damping: 25 }
+
+// Touchpad right-click: Hyprland's `clickfinger_behavior` (false = press the
+// bottom-right corner, true = click with two fingers anywhere). The corner's
+// size is fixed by libinput and not configurable.
+var rightClickOptions = [
+  { value: "corner", label: "Bottom-right corner" },
+  { value: "twofinger", label: "Two-finger click" }
+]
+
+// Touchpad workspace swipe: a horizontal N-finger swipe switches workspaces.
+var swipeOptions = [
+  { value: "off", label: "Off" },
+  { value: "3", label: "3 fingers" },
+  { value: "4", label: "4 fingers" }
+]
+
+var accelOptions = [
+  { value: "adaptive", label: "Adaptive (speeds up as you move faster)" },
+  { value: "flat", label: "Flat (same speed, no acceleration)" }
 ]
 
 var lidActionOptions = [
