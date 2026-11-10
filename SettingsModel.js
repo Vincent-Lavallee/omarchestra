@@ -16,7 +16,8 @@ var sections = [
   { id: "appearance", group: "Personalization", label: "Appearance", icon: "󰸌",
     keywords: ["theme", "style", "look", "wallpaper", "font", "colors", "dark mode", "animations", "motion", "transitions"] },
   { id: "displays",   group: "Personalization", label: "Displays",    icon: "󰍹",
-    keywords: ["monitor", "screen", "resolution", "scaling", "brightness", "external display", "output", "night light"] },
+    keywords: ["monitor", "screen", "resolution", "scaling", "brightness", "external display", "output", "night light",
+               "scale", "fractional scaling", "hidpi", "zoom", "display size"] },
   { id: "sound",      group: "Personalization", label: "Sound",       icon: "󰕾",
     keywords: ["audio", "volume", "speaker", "microphone", "mic", "headphones", "input", "output"] },
   { id: "notifications", group: "Personalization", label: "Notifications", icon: "󰂛",
@@ -175,6 +176,12 @@ var rows = [
 ]
 
 // ---- static dropdown option lists --------------------------------------
+
+// Display scale presets: Omarchy's own (1, 1.25, 1.6, 2, 3, 4, also stepped by
+// Super + /) plus 1.5 and 1.75. Unless in-between scales are allowed, each is
+// rounded up to a scale the display's resolution allows and duplicates are
+// dropped, so a display may offer fewer (e.g. only 100% and 200%).
+var displayScalePresets = ["1", "1.25", "1.5", "1.6", "1.75", "2", "3", "4"]
 
 var animOptions = [
   { value: "none", label: "None" },

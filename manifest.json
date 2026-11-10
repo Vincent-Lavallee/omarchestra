@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.vincent-lavallee.omarchestra",
   "name": "Omarchestra",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": "Vincent Lavallée",
   "description": "Windowed system settings app with search, plus a taskbar gear. Summon with: omarchy-shell shell summon io.github.vincent-lavallee.omarchestra '{}'.",
   "kinds": ["panel", "bar-widget"],

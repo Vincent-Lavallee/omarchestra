@@ -29,6 +29,7 @@ Item {
     shellStatusFile.reload()
     inputStateProc.running = true
     keyboardProc.running = true
+    displayProc.running = true
     powerStateProc.running = true
     powerProfilesProc.running = true
     defaultsProc.running = true
@@ -82,11 +83,16 @@ Item {
   property string currentSection: "appearance"
   property string searchText: ""
 
+  // The scale can also change from Omarchy's own panel or Super + /, so
+  // re-read it whenever Displays is shown.
+  onCurrentSectionChanged: if (currentSection === "displays") displayProc.running = true
+
   readonly property var sectionGroups: Data.sectionGroups
   readonly property var sections: Data.sections
   readonly property var rows: Data.rows
 
   readonly property var animOptions: Data.animOptions
+  readonly property var displayScalePresets: Data.displayScalePresets
   readonly property var windowPaddingOptions: Data.windowPaddingOptions
   readonly property var touchpadScrollDirectionOptions: Data.touchpadScrollDirectionOptions
   readonly property var mouseScrollDirectionOptions: Data.mouseScrollDirectionOptions
@@ -203,6 +209,15 @@ Item {
   // ---- keyboard layout state ----------------------------------------------
   property string keyboardLayout: ""            // primary layout, "us" or "us:intl"
   property var keyboardOptions: []              // [{ value, label }]
+
+  // ---- display scale state ------------------------------------------------
+  property string displayName: ""               // focused output, e.g. "eDP-1"
+  property string displayScale: ""              // selected preset, e.g. "1.6"
+  property var displayScaleOptions: []          // [{ value, label }]
+  property bool displayFractional: false        // in-between scales unlocked
+  property bool displayScalePending: false
+  property string displayModePending: ""        // "on" | "off" | ""
+  property string displayApplyJob: ""           // "mode" | "scale"
 
   // ---- sizing -------------------------------------------------------------
   readonly property int dropdownRowHeight: Style.space(36)   // taller than the kit's 28px control height
@@ -806,6 +821,137 @@ Item {
     }
   }
 
+  // ---- display scale ------------------------------------------------------
+  // Mirrors Omarchy's monitor panel: Hyprland only accepts scales that divide
+  // the mode into whole logical pixels (in 1/120 steps), so each preset is
+  // rounded up to the nearest clean scale for the display, and presets that
+  // land on the same scale collapse into the closest one. With in-between
+  // scales unlocked (`displayFractional`) the presets are offered as they are.
+  function gcd(a, b) {
+    while (b) { var t = a % b; a = b; b = t }
+    return a
+  }
+
+  function cleanScale(scale, width, height) {
+    var g = gcd(Math.round(width * 120), Math.round(height * 120))
+    var k = Math.round(scale * 120)
+    if (k > g) k = g
+    while (g % k !== 0) k++
+    return k / 120
+  }
+
+  function scaleLabel(scale) {
+    return Math.round(scale * 100) + "%"
+  }
+
+  // `raw` is bin/read-display-state.sh's JSON. The scale belongs to the focused
+  // display, which is the one both scale commands change.
+  function parseDisplay(raw) {
+    var mon = null
+    var fractional = false
+    try {
+      var o = JSON.parse(String(raw || ""))
+      fractional = o.fractional === true
+      var list = o.monitors || []
+      for (var i = 0; i < list.length; i++)
+        if (list[i].focused) { mon = list[i]; break }
+    } catch (e) { /* keep the previous state */ }
+    if (!mon || !(mon.width > 0) || !(mon.height > 0)) return
+
+    var byScale = {}
+    var picks = []
+    for (var j = 0; j < displayScalePresets.length; j++) {
+      var preset = displayScalePresets[j]
+      var eff = fractional ? Number(preset) : cleanScale(Number(preset), mon.width, mon.height)
+      var key = eff.toFixed(4)
+      var dist = Math.abs(Number(preset) - eff)
+      var prev = byScale[key]
+      if (prev && prev.dist <= dist) continue
+      var pick = { value: preset, label: scaleLabel(eff), scale: eff, dist: dist }
+      if (prev) picks[picks.indexOf(prev)] = pick
+      else picks.push(pick)
+      byScale[key] = pick
+    }
+
+    // A scale set by hand in monitors.lua may match no preset: show it as is.
+    var current = ""
+    for (var m = 0; m < picks.length; m++)
+      if (Math.abs(picks[m].scale - mon.scale) < 0.001) { current = picks[m].value; break }
+    if (current === "") {
+      current = String(Math.round(mon.scale * 1000) / 1000)
+      picks.push({ value: current, label: scaleLabel(mon.scale) + " (custom)", scale: mon.scale })
+      picks.sort(function(a, b) { return a.scale - b.scale })
+    }
+
+    var opts = []
+    for (var n = 0; n < picks.length; n++) opts.push({ value: picks[n].value, label: picks[n].label })
+    displayName = String(mon.name || "")
+    displayFractional = fractional
+    displayScaleOptions = opts
+    displayScale = current
+  }
+
+  // Clean scales go through Omarchy's own command, which applies the scale to
+  // the focused display right away and saves it (with the matching GDK_SCALE)
+  // to monitors.lua — the same path as Omarchy's monitor panel and Super + /.
+  // In-between scales go through bin/set-display-scale.sh, which does the same
+  // minus Omarchy's rounding to a clean scale.
+  function setDisplayScale(v) {
+    if (!v || v === displayScale) return
+    displayScale = v   // optimistic; re-read once every change is applied
+    displayScalePending = true
+    kickDisplayApply()
+  }
+
+  function setDisplayFractional(on) {
+    if (on === displayFractional) return
+    displayFractional = on
+    displayModePending = on ? "on" : "off"
+    kickDisplayApply()
+  }
+
+  // Changes are applied one at a time, mode before scale, each from the
+  // then-current state, so quick successive picks are never lost or reordered.
+  function kickDisplayApply() {
+    if (!displayApplyProc.running) runDisplayApply()
+  }
+
+  function runDisplayApply() {
+    if (displayModePending !== "") {
+      displayApplyJob = "mode"
+      displayApplyProc.command = ["bash", pluginDir() + "/bin/set-display-fractional.sh", displayModePending]
+      displayModePending = ""
+    } else if (displayScalePending) {
+      displayApplyJob = "scale"
+      displayApplyProc.command = displayFractional
+        ? ["bash", pluginDir() + "/bin/set-display-scale.sh", displayScale]
+        : ["omarchy-hyprland-monitor-scaling", displayScale]
+      displayScalePending = false
+    } else {
+      return false
+    }
+    displayApplyProc.running = true
+    return true
+  }
+
+  property Process displayProc: Process {
+    command: ["bash", root.pluginDir() + "/bin/read-display-state.sh"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.parseDisplay(text)
+    }
+  }
+
+  // Always re-reads the live state once the queue is empty, so the controls
+  // show what Hyprland is really using, whether or not the change took.
+  property Process displayApplyProc: Process {
+    onExited: function(exitCode, exitStatus) {
+      if (exitCode !== 0)
+        root.notify(root.displayApplyJob === "mode" ? "Couldn't change in-between scales" : "Couldn't change display scale")
+      if (!root.runDisplayApply()) root.displayProc.running = true
+    }
+  }
+
   // Watches the marker the floating terminal writes after `chsh` completes, so
   // a failed (wrong/cancelled password) shell change can revert the dropdown.
   property FileView shellStatusFile: FileView {
@@ -1113,6 +1259,7 @@ Item {
 
               AppearanceBlock { host: root }
               AnimationsBlock { host: root }
+              DisplaysBlock { host: root }
               PowerBlock { host: root }
               AccountsBlock { host: root }
               SudoBlock { host: root }

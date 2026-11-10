@@ -106,7 +106,7 @@ omarchy-shell shell hide    io.github.vincent-lavallee.omarchestra       # close
 | Section | What it offers |
 |---|---|
 | Appearance | Theme, background, font, menu bar, lock screen wallpaper, boot screen, window padding, and a **Workspace animation** picker |
-| Displays | `omarchy.monitor` panel, night-light toggle |
+| Displays | `omarchy.monitor` panel, night-light toggle, and a **Scale** picker for the display the window is on (applied and saved through Omarchy's `omarchy-hyprland-monitor-scaling`, like **Super + /**), with an option to allow in-between scales |
 | Sound / Network / Bluetooth | the existing `omarchy.*` panels |
 | Power & Sleep | `omarchy.power` panel, lock & idle, screensaver on/off/start/branding |
 | Defaults | `setup.default` menu route (browser/terminal/editor/agent) |
@@ -148,6 +148,18 @@ section, and a rich set of keyword aliases — "wallpaper" / "background" /
 toggle file (`~/.local/state/omarchy/toggles/hypr/animations.lua`) instead of
 opening `looknfeel.lua`, and account add/remove runs bundled scripts in a
 floating terminal.
+
+### Display scale
+
+Hyprland only accepts a scale that divides the display into whole pixels, so
+some panels allow just 100% and 200% (a 3456×2234 MacBook panel, for one). The
+**Scale** picker lists only the scales your display allows. **Allow in-between
+scales** turns on Hyprland's `debug:disable_scale_checks` through a toggle file,
+`~/.local/state/omarchy/toggles/hypr/omarchestra-display.lua`, so any preset
+(125%, 150%, 175%, …) can be used; edges can look slightly soft. Either way the
+chosen scale is saved to `~/.config/hypr/monitors.lua`, as Omarchy does. Turning
+the option off rounds the scale back to a clean one. **Super + /** keeps stepping
+through clean scales only.
 
 ## Known gaps (future work)
 
