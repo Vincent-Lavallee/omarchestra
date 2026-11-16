@@ -221,19 +221,19 @@ var mouseScrollDirectionOptions = [
 //
 // Bump `version` whenever you change these: it makes the app regenerate the
 // files it already wrote, so existing installs pick the new values up.
-var swipeTuning = { version: 1, distance: 500, cancelRatio: 0.2, minSpeedToForce: 8 }
+var swipeTuning = { version: 2, distance: 750, cancelRatio: 0.3, minSpeedToForce: 5 }
 
 // The slide that plays when you let go of a swipe (and on every workspace
 // switch). It's a spring, not a bezier curve, the same kind of motion macOS uses:
 // it glides to a stop with a long soft tail, and if a new swipe interrupts it
 // mid-slide it carries its speed over instead of restarting. Measured on this
 // hardware (share of the slide done at 50% / 90% / 99% of the way): about
-// 108 / 267 / 442 ms, so it's as quick to move as the old 450 ms bezier but lands
-// more gently. `stiffness` is how fast it moves, `damping` how little it rings
-// (25 is just short of critical damping: no bounce). Keep `mass` at 1. Hyprland
+// 108 / 267 / 442 ms for v2 (170/25); v3 (300/35) computes to about 95 / 225 / 385 ms. It lands
+// gently. `stiffness` is how fast it moves, `damping` how little it rings
+// (35 is critical damping for stiffness 300: no bounce). Keep `mass` at 1. Hyprland
 // ignores the animation's `speed` for springs, so the spring alone sets the timing.
 // Bump `version` when you change it, as with swipeTuning above.
-var slideAnimation = { version: 2, mass: 1, stiffness: 170, damping: 25 }
+var slideAnimation = { version: 3, mass: 1, stiffness: 300, damping: 35 }
 
 // Touchpad right-click: Hyprland's `clickfinger_behavior` (false = press the
 // bottom-right corner, true = click with two fingers anywhere). The corner's
